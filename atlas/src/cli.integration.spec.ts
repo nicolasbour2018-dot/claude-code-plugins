@@ -785,6 +785,53 @@ describe("draft", () => {
   });
 });
 
+function edited(stdin: string, ...args: readonly string[]): Run {
+  const run = Bun.spawnSync([process.execPath, CLI, "edit", ...args], {
+    env: ENV,
+    stdin: Buffer.from(stdin),
+  });
+
+  return { code: run.exitCode, stdout: run.stdout.toString(), stderr: run.stderr.toString() };
+}
+
+describe("edit", () => {
+  const blocks = `<<<<<<< OLD
+label: "Part",
+=======
+label: "Piece",
+>>>>>>> NEW
+`;
+
+  test("writes the blocks on stdin into a draft's data file, which check then reads", () => {
+    const dir = fresh();
+    const draft = cli("draft", dir, "plan-piece").stdout.trim();
+
+    expect(edited(blocks, dir, "plan-piece", "map.ts")).toEqual({
+      code: 0,
+      stdout: "map.ts: 1 block(s) applied\n",
+      stderr: "",
+    });
+    expect(readFileSync(join(draft, "map.ts"), "utf8")).toContain('label: "Piece"');
+    expect(readFileSync(join(dir, "map.ts"), "utf8")).toContain('label: "Part"');
+    expect(cli("check", draft).code).toBe(0);
+  });
+
+  test("refuses a file outside the draft's data files, a missing draft and missing words", () => {
+    const dir = fresh();
+    cli("draft", dir, "plan-piece");
+
+    expect(edited(blocks, dir, "plan-piece", "atlas.d.ts")).toEqual({
+      code: 1,
+      stdout: "",
+      stderr: "edit: atlas.d.ts is no data file of the draft plan-piece: atlas.config.ts, map.ts\n",
+    });
+    expect(edited(blocks, dir, "plan-other", "map.ts").stderr).toStartWith(
+      "edit: no draft plan-other",
+    );
+    expect(edited(blocks, dir, "plan-piece").stderr).toStartWith("edit: usage:");
+  });
+});
+
 /** A map folder that preloads code into any bun started in it, through bunfig.toml and .env. */
 function planted(dir: string): string {
   const marker = join(dir, "preloaded");

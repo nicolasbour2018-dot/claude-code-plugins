@@ -21,6 +21,7 @@ import {
   makeDraft,
   messageOf,
 } from "./commands/drafts.ts";
+import { EditError, editDraft } from "./commands/edit.ts";
 import { ReplyError, appendReply } from "./commands/reply.ts";
 import { InventoryError, inventoryOf, printed, summaryOf } from "./inventory/inventory.ts";
 import type { Link, Node } from "./model/atlas.ts";
@@ -52,7 +53,11 @@ const USAGE = `usage: bun ${CLI} <command> …
                                                     --adopt copies its data files and threads.json back
                                                     and deletes it,
                                                     --drop deletes it
-  query <dir> <node id>                             print one node as JSON: its path from the root, its
+  edit <dir> <name> <file>                          replace text in a data file of the draft <name>, as
+                                                    the blocks on stdin say, each a "<<<<<<< OLD" line,
+                                                    the text to replace, a "=======" line, the text that
+                                                    replaces it and a ">>>>>>> NEW" line
+  query <dir> <node id>                            print one node as JSON: its path from the root, its
                                                     children, its links both ways, its couplings, its
                                                     panel's fields and its sources
   inventory <repo> [--summary]                      print what a repository holds as JSON: its manifests,
@@ -416,7 +421,30 @@ function draft(args: readonly string[]): number {
   return 0;
 }
 
-const COMMANDS = ["new", "sync", "check", "fmt", "reply", "draft", "query", "inventory"] as const;
+async function edit(args: readonly string[]): Promise<number> {
+  const [dirArg, name, file, ...extra] = parse(args, []).positionals;
+
+  if (dirArg === undefined || name === undefined || file === undefined || extra.length > 0) {
+    throw new CliError(USAGE);
+  }
+
+  const edited = editDraft(mapFolder(dirArg), name, file, await Bun.stdin.text());
+  console.log(`${edited.file}: ${edited.blocks} block(s) applied`);
+
+  return 0;
+}
+
+const COMMANDS = [
+  "new",
+  "sync",
+  "check",
+  "fmt",
+  "reply",
+  "draft",
+  "edit",
+  "query",
+  "inventory",
+] as const;
 
 type Command = (typeof COMMANDS)[number];
 
@@ -461,6 +489,10 @@ async function run(command: Command, args: readonly string[]): Promise<number> {
       return draft(args);
     }
 
+    case "edit": {
+      return await edit(args);
+    }
+
     case "query": {
       return await query(args);
     }
@@ -490,6 +522,7 @@ if (import.meta.main) {
       !(
         error instanceof CliError ||
         error instanceof DraftError ||
+        error instanceof EditError ||
         error instanceof ReplyError ||
         error instanceof InventoryError
       )

@@ -32,7 +32,7 @@ of its layer, never at a root, its spec beside it. `model/` imports nothing outs
 
 ```
 src/cli.ts           the one command line of agents and skills, and of the mod's tools: new, sync,
-                     check, fmt, reply, draft, query (one node as JSON, read from tree.ts),
+                     check, fmt, reply, draft, edit, query (one node as JSON, read from tree.ts),
                      inventory (cli.integration.spec.ts, on copies in temporary folders)
 src/serve.ts         serves one map folder's page, rebuilt and reloaded on save, answers
                      libavoid.wasm, threads.json and the lines a citation names
@@ -111,6 +111,9 @@ src/commands/        what cli.ts does to a map folder
                      lines, or the missing root in one line (check.spec.ts)
   reply.ts           adds an entry to a thread of a map folder (reply.spec.ts)
   drafts.ts          a map folder's data files, and its drafts: made, adopted, dropped
+  edit.ts            replaces text in one data file of a draft, each text to replace found once,
+                     the file written whole or left as it was: plan-map's write in plan mode, where
+                     the Edit tool writes the plan file alone (edit.spec.ts)
 
 src/inventory/       what a repository holds, as JSON, model-free, for /atlas:init
   inventory.ts       the summary and the one pass that keeps no text: the files listing.ts lists
@@ -188,6 +191,9 @@ hooks/               the mod: register.ts spells `$`, server.ts the server's sta
 skills/board, stop   /atlas:board [map folder] [draft name] and /atlas:stop, the person's alone
 skills/init          /atlas:init [map folder], the person's alone: a first map, inventory to verified
                      parts; branch-brief.md and verify-brief.md are its subagents' prompts
+skills/plan-map      /atlas:plan-map [map folder], the agent's as well: a plan drawn on a draft of
+                     the map, its marks three palette keys, the after phase and `plan-` open points,
+                     shown on /atlas:board and linked from the plan
 ```
 
 The mod keeps one server per map folder, whichever session asks. Its store keeps, under
@@ -228,6 +234,7 @@ bun atlas/src/cli.ts fmt <map folder>           # format in place the files chec
 bun atlas/src/cli.ts reply <map folder> <open id> --as agent "<text>"   # answer an open point; an agent always writes as agent
 bun atlas/src/cli.ts draft <map folder> <name>  # copy the map's own files into drafts/<name> and print its path
 bun atlas/src/cli.ts draft <map folder> <name> --adopt   # its data files and threads.json replace the map's, then it is deleted; --drop deletes it
+bun atlas/src/cli.ts edit <map folder> <name> <file> < blocks   # replace text in a data file of the draft, as the OLD/NEW blocks on stdin say
 bun atlas/src/cli.ts query <map folder> <node id>   # one node as JSON: path, children, links, couplings, fields, sources
 bun atlas/src/cli.ts inventory <repo> [--summary]   # what a repository holds, as JSON; --summary for a first read
 bun test atlas                                  # the engine's suites, *.spec.ts

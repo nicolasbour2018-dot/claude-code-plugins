@@ -91,7 +91,7 @@ function draftPath(dir: string, name: string): string {
   return path;
 }
 
-function existingDraft(dir: string, name: string): string {
+export function existingDraft(dir: string, name: string): string {
   const path = draftPath(dir, name);
 
   if (!existsSync(join(path, MAP_FILE))) {
